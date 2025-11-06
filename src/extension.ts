@@ -4,6 +4,39 @@ import type { Readable, Writable } from "node:stream";
 
 ////////////////////////////////////////////////////////////////////////////////
 
+type Typename = (
+	| "string"
+	| "number"
+	| "bigint"
+	| "boolean"
+	| "symbol"
+	| "undefined"
+	| "object"
+	| "function"
+);
+
+type TypenameToType<N extends Typename> = (
+	N extends "string"    ? string    :
+	N extends "number"    ? number    :
+	N extends "bigint"    ? bigint    :
+	N extends "boolean"   ? boolean   :
+	N extends "symbol"    ? symbol    :
+	N extends "undefined" ? undefined :
+	N extends "object"    ? object    :
+	N extends "function"  ? Function  :
+	never
+);
+
+function assertType<N extends Typename>(object: unknown, expectedType: N): asserts object is TypenameToType<N> {
+	const actualType = typeof object;
+
+	if (actualType === expectedType) {
+		return object as any;
+	}
+
+	throw new TypeError(`bad type of object! (${expectedType} expected, got ${actualType})`);
+}
+
 export async function activate(context: vscode.ExtensionContext) {
 	const yueProcess: ChildProcessByStdio<Writable, Readable, null> = spawn("yue", ["-e", context.extensionPath + "/src/server.yue"], {
 		stdio: ["pipe", "pipe", "inherit"],
@@ -51,17 +84,12 @@ export async function activate(context: vscode.ExtensionContext) {
 		}
 
 		const [[node, message, line, column]] = reply["error"];
+		assertType(node, "string");
+		assertType(message, "string");
+		assertType(line, "number");
+		assertType(column, "number");
 		if (node !== "error") {
 			throw new Error(`Invalid node '${node}'!`);
-		}
-		if (typeof message !== "string") {
-			throw new TypeError(`typeof message === '${typeof message}'`);
-		}
-		if (typeof line !== "number") {
-			throw new TypeError(`typeof line === '${typeof line}'`);
-		}
-		if (typeof column !== "number") {
-			throw new TypeError(`typeof column === '${typeof column}'`);
 		}
 
 		diagnostics.set(activeEditor.document.uri, [new vscode.Diagnostic(
