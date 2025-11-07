@@ -14,7 +14,7 @@ const json = do
 
 const send = (data, raw = false) ->
 	if not raw
-		data = (json.dump or json.encode)(data)::gsub("[\r\n]", "")
+		data = string.gsub((json.dump or json.encode)(data), "[\r\n]", "")
 
 	assert(type(data) == "string")
 
@@ -34,18 +34,30 @@ const recieve = () ->
 	data, rawData
 
 
+const eventHandlers = {
+	textChange: {
+		(input) ->
+			const sourceCode = string.gsub(input.sourceCode, "%s*$", "")
+			const success, astOrError, transpiledLuaCode = yue.check(sourceCode)
+
+			send({
+				:success
+				-- :transpiledLuaCode
+				-- :rawInput
+				[success and "ast" or "error"]: astOrError
+			})
+	},
+}
+
+
 while true
 	const input, rawInput = recieve()
 
 	if input == nil
-		send("{}")
+		send("{}", true)
 		return
 
-	const success, astOrError, transpiledLuaCode = yue.check(input.sourceCode)
+	assert(type(input.event) == "string")
 
-	send({
-		:success
-		-- :transpiledLuaCode
-		-- :rawInput
-		[success and "ast" or "error"]: astOrError
-	})
+	for fn in *(eventHandlers[input.event] ?? {})
+		fn(input.payload)

@@ -144,7 +144,10 @@ function textChangeCallback({
 		};
 
 		if (!yueProcess.stdin.write(JSON.stringify({
-			sourceCode: activeEditor.document.getText().trimEnd(),
+			event: "textChange",
+			payload: {
+				sourceCode: activeEditor.document.getText(),
+			},
 		}) + "\n")) {
 			yueProcess.stdin.once("drain", callback);
 		} else {
